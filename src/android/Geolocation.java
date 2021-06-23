@@ -30,8 +30,21 @@ import org.apache.cordova.PluginResult;
 import org.apache.cordova.LOG;
 import org.json.JSONArray;
 import org.json.JSONException;
+import org.json.JSONObject;
 
 import javax.security.auth.callback.Callback;
+
+import android.location.Location;
+import android.location.LocationManager;
+import android.os.Looper;
+import android.util.Log;
+
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationAvailability;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.location.LocationServices;
 
 public class Geolocation extends CordovaPlugin {
 
@@ -40,6 +53,9 @@ public class Geolocation extends CordovaPlugin {
 
     String [] permissions = { Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION };
 
+    private FusedLocationProviderClient fusedLocationProviderClient;
+    private LocationRequest locationRequest;
+    private LocationCallback locationCallback;
 
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
         LOG.d(TAG, "We are entering execute");
@@ -53,6 +69,15 @@ public class Geolocation extends CordovaPlugin {
                 return true;
             }
             else {
+                PermissionHelper.requestPermissions(this, 0, permissions);
+            }
+            return true;
+        } else if (action.equals("getCurrentPosition")) {
+            if(hasPermisssion())
+            {
+                this.getPosition(context);
+                return true;
+            } else {
                 PermissionHelper.requestPermissions(this, 0, permissions);
             }
             return true;
@@ -102,6 +127,60 @@ public class Geolocation extends CordovaPlugin {
         PermissionHelper.requestPermissions(this, requestCode, permissions);
     }
 
+    private void getPosition(CallbackContext callbackContext) {
+        requestLocationUpdates(callbackContext);
+    }
 
+    @SuppressWarnings("MissingPermission")
+    private void requestLocationUpdates(CallbackContext callbackContext) {
+        clearLocationUpdates();
+
+        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(cordova.getActivity());
+
+        locationRequest = new LocationRequest();
+        locationRequest.setInterval(1L);
+        locationRequest.setMaxWaitTime(5L);
+        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+
+        locationCallback = new LocationCallback(){
+            @Override
+            public void onLocationResult(LocationResult locationResult) {
+                super.onLocationResult(locationResult);
+
+                try {
+                    clearLocationUpdates();
+
+                    Location location = locationResult.getLastLocation();
+
+                    JSONObject jsonResult = new JSONObject();
+                    jsonResult.put("latitude", location.getLatitude());
+                    jsonResult.put("longitude", location.getLongitude());
+                    jsonResult.put("altitude", location.getAltitude());
+                    jsonResult.put("accuracy", location.getAccuracy());
+                    jsonResult.put("heading", "");
+                    jsonResult.put("velocity", "");
+                    jsonResult.put("altitudeAccuracy", "");
+
+                    callbackContext.success(jsonResult.toString());
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            @Override
+            public void onLocationAvailability(LocationAvailability locationAvailability) {
+                super.onLocationAvailability(locationAvailability);
+            }
+        };
+
+        fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallback, Looper.myLooper());
+    }
+
+    public void clearLocationUpdates() {
+        if (locationCallback != null) {
+            fusedLocationProviderClient.removeLocationUpdates(locationCallback);
+            locationCallback = null;
+        }
+    }
 
 }

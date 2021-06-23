@@ -28,13 +28,15 @@ xmlns:android="http://schemas.android.com/apk/res/android"
     <description>Cordova Geolocation Plugin</description>
     <license>Apache 2.0</license>
     <keywords>cordova,geolocation</keywords>
-    <repo>https://github.com/apache/cordova-plugin-geolocation</repo>
+    <repo>https://github.com/rnaufal32/cordova-plugin-geolocation</repo>
     <issue>https://github.com/apache/cordova-plugin-geolocation/issues</issue>
 
     <engines>
-        <engine name="cordova-android" version=">=6.3.0" />
+		<engine name="cordova" version=">=9.0.0" />
+		<engine name="cordova-android" version=">=8.0.0" />
+		<engine name="cordova-ios" version=">=5.0.0" />
     </engines>
-    <preference name="GPS_REQUIRED" default="true"/>
+    <preference name="GPS_REQUIRED" default="false"/>
 
     <!-- android -->
     <platform name="android">
@@ -58,9 +60,19 @@ xmlns:android="http://schemas.android.com/apk/res/android"
         </js-module>
 
         <!-- We don't expose PositionError via clobber on Android as we use it internally only -->
-        <js-module src="www/PositionError.js" name="PositionError">
-            <runs />
+        <js-module src="www/Coordinates.js" name="Coordinates">
+            <clobbers target="Coordinates" />
         </js-module>
+
+        <js-module src="www/PositionError.js" name="PositionError">
+            <clobbers target="PositionError" />
+        </js-module>
+
+        <js-module src="www/Position.js" name="Position">
+            <clobbers target="Position" />
+        </js-module>
+
+        <framework src="com.google.android.gms:play-services-location:16.0.0" />
 
     </platform>
 

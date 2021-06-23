@@ -22,23 +22,62 @@
 var exec = cordova.require('cordova/exec'); // eslint-disable-line no-undef
 var utils = require('cordova/utils');
 var PositionError = require('./PositionError');
+var Position = require('./Position');
 
 // Native watchPosition method is called async after permissions prompt.
 // So we use additional map and own ids to return watch id synchronously.
 var pluginToNativeWatchMap = {};
 
-module.exports = {
-    getCurrentPosition: function (success, error, args) {
-        var win = function () {
-            var geo = cordova.require('cordova/modulemapper').getOriginalSymbol(window, 'navigator.geolocation'); // eslint-disable-line no-undef
-            geo.getCurrentPosition(success, error, args);
-        };
-        var fail = function () {
-            if (error) {
-                error(new PositionError(PositionError.PERMISSION_DENIED, 'Illegal Access'));
+// Returns default params, overrides if provided with values
+function parseParameters(options) {
+    var opt = {
+        maximumAge: 0,
+        enableHighAccuracy: false,
+        timeout: Infinity
+    };
+
+    if (options) {
+        if (options.maximumAge !== undefined && !isNaN(options.maximumAge) && options.maximumAge > 0) {
+            opt.maximumAge = options.maximumAge;
+        }
+        if (options.enableHighAccuracy !== undefined) {
+            opt.enableHighAccuracy = options.enableHighAccuracy;
+        }
+        if (options.timeout !== undefined && !isNaN(options.timeout)) {
+            if (options.timeout < 0) {
+                opt.timeout = 0;
+            } else {
+                opt.timeout = options.timeout;
             }
+        }
+    }
+
+    return opt;
+}
+
+module.exports = {
+    getCurrentPosition: function (successCallback, errorCallback, args) {
+        args = parseParameters(args)
+        var win = function (p) {
+            p = JSON.parse(p)
+            var pos = new Position(
+                {
+                    latitude: p.latitude,
+                    longitude: p.longitude,
+                    altitude: p.altitude,
+                    accuracy: p.accuracy,
+                    heading: p.heading,
+                    velocity: p.velocity,
+                    altitudeAccuracy: p.altitudeAccuracy
+                },
+                p.timestamp
+            );
+            successCallback(pos);
         };
-        exec(win, fail, 'Geolocation', 'getPermission', []);
+        var fail = function (error) {
+            errorCallback(JSON.stringify(error))
+        };
+        exec(win, fail, 'Geolocation', 'getCurrentPosition', [args.enableHighAccuracy, args.maximumAge]);
     },
 
     watchPosition: function (success, error, args) {
