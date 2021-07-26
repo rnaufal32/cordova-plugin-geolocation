@@ -20,10 +20,8 @@ package org.apache.cordova.geolocation;
 
 import android.content.pm.PackageManager;
 import android.Manifest;
-import android.os.Build;
 
 import org.apache.cordova.CallbackContext;
-import org.apache.cordova.CordovaArgs;
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.PermissionHelper;
 import org.apache.cordova.PluginResult;
@@ -32,12 +30,9 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import javax.security.auth.callback.Callback;
 
 import android.location.Location;
-import android.location.LocationManager;
 import android.os.Looper;
-import android.util.Log;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationAvailability;
@@ -45,6 +40,7 @@ import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.tasks.OnSuccessListener;
 
 public class Geolocation extends CordovaPlugin {
 
@@ -163,7 +159,7 @@ public class Geolocation extends CordovaPlugin {
 
                     callbackContext.success(jsonResult.toString());
                 } catch (JSONException e) {
-                    e.printStackTrace();
+                    callbackContext.error(e.getMessage());
                 }
             }
 
@@ -173,7 +169,31 @@ public class Geolocation extends CordovaPlugin {
             }
         };
 
-        fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallback, Looper.myLooper());
+        fusedLocationProviderClient.getLastLocation()
+                .addOnSuccessListener(cordova.getActivity(), new OnSuccessListener<Location>() {
+                    @Override
+                    public void onSuccess(Location location) {
+                        if (location != null) {
+                            try {
+                                JSONObject jsonResult = new JSONObject();
+                                jsonResult.put("latitude", location.getLatitude());
+                                jsonResult.put("longitude", location.getLongitude());
+                                jsonResult.put("altitude", location.getAltitude());
+                                jsonResult.put("accuracy", location.getAccuracy());
+                                jsonResult.put("heading", "");
+                                jsonResult.put("velocity", "");
+                                jsonResult.put("altitudeAccuracy", "");
+
+                                callbackContext.success(jsonResult.toString());
+                            } catch (JSONException e) {
+                                callbackContext.error(e.getMessage());
+                            }
+                        } else {
+                            fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper());
+                        }
+                    }
+                });
+
     }
 
     public void clearLocationUpdates() {
