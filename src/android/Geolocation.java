@@ -133,7 +133,6 @@ public class Geolocation extends CordovaPlugin {
 
     @SuppressWarnings("MissingPermission")
     private void requestLocationUpdates(CallbackContext callbackContext) {
-        clearLocationUpdates();
 
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(cordova.getActivity());
 
@@ -148,7 +147,6 @@ public class Geolocation extends CordovaPlugin {
                 super.onLocationResult(locationResult);
 
                 try {
-                    clearLocationUpdates();
 
                     Location location = locationResult.getLastLocation();
 
@@ -162,6 +160,8 @@ public class Geolocation extends CordovaPlugin {
                     jsonResult.put("altitudeAccuracy", "");
 
                     callbackContext.success(jsonResult.toString());
+                       
+                    clearLocationUpdates();
                 } catch (JSONException e) {
                     callbackContext.error(e.getMessage());
                 }
